@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Person-Hours Calculator</title>
-<meta name="description" content="Estimate validation person-hours for a mapping project from area, latitude, zoom level and reviews per tile — or the reverse.">
+<meta name="description" content="Estimate how much volunteer time a mapping project needs, or how much area a given amount of volunteer time can cover.">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <style>
@@ -12,23 +12,36 @@
     --bg: #f6f7f9; --card: #ffffff; --text: #1b1f24; --muted: #5b6470;
     --border: #dde1e6; --accent: #d73f3f; --accent-soft: #fbeaea;
     --fixed: #eef1f5; --out: #e9f5ee; --out-text: #1d6b3c;
+    --warn: #fff6e0; --warn-text: #7a5300;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #121417; --card: #1b1e23; --text: #e6e8eb; --muted: #9aa3ad;
       --border: #2e333a; --accent: #ef6a6a; --accent-soft: #3a2224;
       --fixed: #23272d; --out: #17301f; --out-text: #7fd6a0;
+      --warn: #33290f; --warn-text: #f0c766;
     }
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
   main { max-width: 880px; margin: 0 auto; padding: 32px 16px 64px; }
-  h1 { font-size: 1.6rem; margin: 0 0 4px; }
-  h2 { font-size: 1.05rem; margin: 0 0 12px; }
-  .lede { color: var(--muted); margin: 0 0 24px; }
+  h1 { font-size: 1.6rem; margin: 0 0 16px; }
+
+  /* Tool tabs */
+  .tools { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; overflow-x: auto; }
+  .tools a {
+    padding: 8px 14px; color: var(--muted); text-decoration: none; font-weight: 600;
+    border-bottom: 2px solid transparent; white-space: nowrap;
+  }
+  .tools a[aria-current="page"] { color: var(--text); border-bottom-color: var(--accent); }
+  .tools .soon { font-size: .7rem; font-weight: 500; padding: 1px 6px; border-radius: 4px; background: var(--fixed); margin-left: 6px; }
+
+  .intro { color: var(--muted); margin-bottom: 20px; }
+  .intro p { margin: 0 0 10px; }
+
   .card {
     background: var(--card); border: 1px solid var(--border);
     border-radius: 10px; padding: 20px; margin-bottom: 16px;
@@ -39,34 +52,26 @@
     font: inherit; cursor: pointer;
   }
   .toggle button[aria-pressed="true"] { background: var(--accent); color: #fff; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
-  label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
-  label b { color: var(--text); font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+  label { display: flex; align-items: baseline; gap: 6px; font-size: .88rem; margin-bottom: 4px; }
+  .sym { font-weight: 700; font-size: .8rem; color: var(--accent); min-width: 1.4em; }
   input, select {
     width: 100%; padding: 9px 10px; font: inherit; color: var(--text);
     background: var(--card); border: 1px solid var(--border); border-radius: 6px;
   }
   input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
   input[readonly] { background: var(--fixed); color: var(--muted); }
-  .hint { font-size: .78rem; color: var(--muted); margin-top: 3px; }
+  .hint { font-size: .76rem; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+
   .result {
     background: var(--out); color: var(--out-text); border-radius: 10px;
     padding: 18px 20px; margin-bottom: 16px;
   }
   .result .big { font-size: 2rem; font-weight: 700; line-height: 1.1; }
-  .result .sub { font-size: .9rem; opacity: .85; margin-top: 4px; }
-  .error { background: var(--accent-soft); color: var(--accent); }
-  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
-  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
-  th { color: var(--muted); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; }
-  td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .tag { font-size: .72rem; padding: 1px 6px; border-radius: 4px; background: var(--fixed); color: var(--muted); white-space: nowrap; }
-  .tag.in { background: var(--accent-soft); color: var(--accent); }
-  .tag.out { background: var(--out); color: var(--out-text); }
-  .eq { overflow-x: auto; padding: 6px 0; }
-  .steps li { margin-bottom: 6px; }
-  .steps { padding-left: 20px; margin: 0; font-variant-numeric: tabular-nums; }
-  .table-wrap { overflow-x: auto; }
+  .result .sub { font-size: .9rem; opacity: .85; margin-top: 6px; }
+  .result.error { background: var(--accent-soft); color: var(--accent); }
+  .note { background: var(--warn); color: var(--warn-text); border-radius: 8px; padding: 10px 14px; font-size: .88rem; margin-bottom: 16px; }
+
   .more { padding: 12px 20px; font-size: .88rem; }
   .more summary {
     cursor: pointer; font-weight: 600; font-size: .92rem; color: var(--muted);
@@ -76,211 +81,156 @@
   .more summary::before { content: "\25B8"; transition: transform .15s; display: inline-block; }
   .more[open] summary::before { transform: rotate(90deg); }
   .more[open] summary { margin-bottom: 12px; color: var(--text); }
-  .more table { font-size: .84rem; }
-  .more .eq { font-size: .85rem; }
+  .steps { padding-left: 20px; margin: 0; font-variant-numeric: tabular-nums; }
+  .steps li { margin-bottom: 6px; }
+  .eq { overflow-x: auto; padding: 4px 0; font-size: .85rem; }
+  .eq-text { margin: 6px 0 0; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: .76rem; text-transform: uppercase; letter-spacing: .03em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.num { white-space: nowrap; }
+  .tag { font-size: .72rem; padding: 1px 6px; border-radius: 4px; background: var(--fixed); color: var(--muted); white-space: nowrap; }
+  .tag.Input { background: var(--accent-soft); color: var(--accent); }
+  .tag.Result { background: var(--out); color: var(--out-text); }
+
   @media (max-width: 560px) {
     .toggle { display: flex; }
     .toggle button { flex: 1; padding: 8px 10px; }
     th:nth-child(3), td:nth-child(3) { display: none; }
     td.num { white-space: normal; }
+    .tools a { padding: 8px 10px; font-size: .9rem; }
   }
 </style>
+
+<script>
+  // Registry that each calculators/*.js file adds itself to.
+  window.Calculators = { list: [], register(def) { this.list.push(def); } };
+</script>
+<!-- One file per tool. Tabs appear in this order. -->
+<script src="calculators/mapswipe.js"></script>
+<script src="calculators/tasking-manager.js"></script>
 </head>
 <body>
 <main>
   <h1>Person-Hours Calculator</h1>
-  <p class="lede">Estimate how many volunteer person-hours a validation project needs — or how much area a given number of person-hours can cover.</p>
-
-  <section class="card">
-    <div class="toggle" role="group" aria-label="What to calculate">
-      <button type="button" data-mode="PH" aria-pressed="true">Solve for person-hours (PH)</button>
-      <button type="button" data-mode="A" aria-pressed="false">Solve for area (A)</button>
-    </div>
-
-    <div class="grid">
-      <div id="field-A">
-        <label for="A"><b>A</b> — Total mapped area (km²)</label>
-        <input id="A" type="number" min="0" step="any" value="3210">
-      </div>
-      <div id="field-PH" hidden>
-        <label for="PH"><b>PH</b> — Available person-hours</label>
-        <input id="PH" type="number" min="0" step="any" value="1454.31">
-      </div>
-      <div>
-        <label for="phi"><b>φ</b> — Project latitude (°)</label>
-        <input id="phi" type="number" min="-85" max="85" step="any" value="51.15">
-        <div class="hint">Centre of the project area; −85 to 85.</div>
-      </div>
-      <div>
-        <label for="Z"><b>Z</b> — Zoom level</label>
-        <select id="Z"></select>
-      </div>
-      <div>
-        <label for="R"><b>R</b> — Reviews per tile</label>
-        <input id="R" type="number" min="1" step="1" value="5">
-      </div>
-      <div>
-        <label for="T"><b>T</b> — Seconds per tile</label>
-        <input id="T" type="number" value="3" readonly>
-        <div class="hint">Fixed</div>
-      </div>
-    </div>
-  </section>
-
-  <section class="result" id="result" aria-live="polite"></section>
-
-  <details class="card more">
-    <summary>Working</summary>
-    <ol class="steps" id="steps"></ol>
-  </details>
-
-  <details class="card more">
-    <summary>Equations</summary>
-    <div class="eq" data-tex="PH = \dfrac{\left(\dfrac{A}{W^2/10^6}\right) \times R \times T}{3600}"></div>
-    <p style="margin:8px 0 0">where the ground width of one tile is</p>
-    <div class="eq" data-tex="W = \dfrac{C\cos(\phi)}{2^Z}"></div>
-    <p style="margin:8px 0 0">Rearranged to solve for area:</p>
-    <div class="eq" data-tex="A = \dfrac{PH \times 3600}{R \times T} \times \dfrac{W^2}{10^6}"></div>
-  </details>
-
-  <details class="card more">
-    <summary>Variables</summary>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Var</th><th>Meaning</th><th>Type</th><th style="text-align:right">Value</th></tr></thead>
-        <tbody id="vars"></tbody>
-      </table>
-    </div>
-  </details>
+  <nav class="tools" id="tools" aria-label="Calculators"></nav>
+  <div id="app"></div>
 </main>
 
 <script>
 (function () {
-  const C = 40075016.686;      // Earth's equatorial circumference, m
-  const M2_PER_KM2 = 1e6;
-  const S_PER_H = 3600;
+  const f = {
+    num: (x, d = 2) => Number.isFinite(x)
+      ? x.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }) : '–',
+    int: x => Number.isFinite(x) ? Math.round(x).toLocaleString('en-US') : '–',
+  };
+  const tools = window.Calculators.list;
+  const app = document.getElementById('app');
+  let tool, mode;
 
-  const $ = id => document.getElementById(id);
-  const fmt = (x, d = 2) => Number.isFinite(x)
-    ? x.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }) : '—';
-  const int = x => Number.isFinite(x) ? Math.round(x).toLocaleString('en-US') : '—';
+  // Tabs
+  document.getElementById('tools').innerHTML = tools.map(t =>
+    `<a href="#${t.id}" data-id="${t.id}">${t.name}${t.comingSoon ? '<span class="soon">Soon</span>' : ''}</a>`
+  ).join('');
+  window.addEventListener('hashchange', route);
 
-  let mode = 'PH';
-
-  // Zoom options
-  const zSel = $('Z');
-  for (let z = 12; z <= 22; z++) {
-    const o = document.createElement('option');
-    o.value = z; o.textContent = z; if (z === 18) o.selected = true;
-    zSel.appendChild(o);
+  function route() {
+    const id = location.hash.slice(1);
+    tool = tools.find(t => t.id === id) || tools[0];
+    document.querySelectorAll('#tools a').forEach(a => {
+      if (a.dataset.id === tool.id) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+    render();
   }
 
-  document.querySelectorAll('.toggle button').forEach(btn => {
-    btn.addEventListener('click', () => {
-      mode = btn.dataset.mode;
-      document.querySelectorAll('.toggle button').forEach(b =>
-        b.setAttribute('aria-pressed', String(b === btn)));
-      $('field-A').hidden = mode !== 'PH';
-      $('field-PH').hidden = mode !== 'A';
-      update();
-    });
-  });
-  ['A', 'PH', 'phi', 'Z', 'R'].forEach(id => $(id).addEventListener('input', update));
+  function render() {
+    if (tool.comingSoon) {
+      app.innerHTML = `<div class="intro">${tool.intro}</div>`;
+      return;
+    }
+    mode = tool.modes[0].id;
+    const given = new Set(tool.modes.map(m => m.given));
+
+    app.innerHTML = `
+      <div class="intro">${tool.intro}</div>
+      <section class="card">
+        <div class="toggle" role="group" aria-label="What to calculate">
+          ${tool.modes.map(m => `<button type="button" data-mode="${m.id}">${m.label}</button>`).join('')}
+        </div>
+        <div class="grid">${tool.inputs.map(inputHtml).join('')}</div>
+      </section>
+      <section class="result" id="result" aria-live="polite"></section>
+      <div id="notes"></div>
+      <details class="card more"><summary>How it was worked out</summary><ol class="steps" id="steps"></ol></details>
+      <details class="card more"><summary>Equations</summary>
+        ${tool.equations.map(e => e.tex
+          ? `<div class="eq" data-tex="${e.tex.replace(/"/g, '&quot;')}"></div>`
+          : `<p class="eq-text">${e.text}</p>`).join('')}
+      </details>
+      <details class="card more"><summary>Variables</summary>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Symbol</th><th>Meaning</th><th>Role</th><th class="num">Value</th></tr></thead>
+          <tbody id="vars"></tbody>
+        </table></div>
+      </details>`;
+
+    app.querySelectorAll('.toggle button').forEach(b => b.addEventListener('click', () => { mode = b.dataset.mode; update(); }));
+    tool.inputs.forEach(i => app.querySelector('#in-' + i.id).addEventListener('input', update));
+    renderTex();
+    update();
+
+    function inputHtml(i) {
+      const unit = i.unit ? ` (${i.unit})` : '';
+      const field = i.type === 'select'
+        ? `<select id="in-${i.id}">${i.options.map(o => `<option${o === i.default ? ' selected' : ''}>${o}</option>`).join('')}</select>`
+        : `<input id="in-${i.id}" type="number" step="${i.step ?? 'any'}" value="${i.default}"
+             ${i.min !== undefined ? `min="${i.min}"` : ''} ${i.max !== undefined ? `max="${i.max}"` : ''} ${i.fixed ? 'readonly' : ''}>`;
+      return `<div data-field="${i.id}" ${given.has(i.id) ? 'data-given' : ''}>
+        <label for="in-${i.id}"><span class="sym">${i.symbol}</span>${i.label}${unit}</label>
+        ${field}${i.hint ? `<div class="hint">${i.hint}</div>` : ''}</div>`;
+    }
+  }
 
   function update() {
-    const phi = parseFloat($('phi').value);
-    const Z = parseInt($('Z').value, 10);
-    const R = parseFloat($('R').value);
-    const T = parseFloat($('T').value);
-    const A_in = parseFloat($('A').value);
-    const PH_in = parseFloat($('PH').value);
-    const res = $('result');
+    const m = tool.modes.find(x => x.id === mode);
+    app.querySelectorAll('.toggle button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+    app.querySelectorAll('[data-given]').forEach(el => { el.hidden = el.dataset.field !== m.given; });
 
-    const errs = [];
-    if (!Number.isFinite(phi) || Math.abs(phi) > 85) errs.push('Latitude must be between −85° and 85°.');
-    if (!Number.isFinite(R) || R <= 0) errs.push('Reviews per tile must be greater than 0.');
-    if (mode === 'PH' && (!Number.isFinite(A_in) || A_in < 0)) errs.push('Enter a non-negative area.');
-    if (mode === 'A' && (!Number.isFinite(PH_in) || PH_in < 0)) errs.push('Enter non-negative person-hours.');
+    const v = {};
+    tool.inputs.forEach(i => { v[i.id] = parseFloat(app.querySelector('#in-' + i.id).value); });
 
+    const res = app.querySelector('#result');
+    const errs = tool.validate ? tool.validate(v, mode) : [];
     if (errs.length) {
       res.className = 'result error';
       res.innerHTML = errs.join('<br>');
-      $('steps').innerHTML = '';
-      renderVars({ phi, Z, R, T });
+      app.querySelector('#notes').innerHTML = '';
+      app.querySelector('#steps').innerHTML = '';
+      app.querySelector('#vars').innerHTML = '';
       return;
     }
 
-    const W = C * Math.cos(phi * Math.PI / 180) / Math.pow(2, Z);   // m
-    const tileKm2 = W * W / M2_PER_KM2;                                // km² per tile
-    let A, PH, tiles;
-
-    if (mode === 'PH') {
-      A = A_in;
-      tiles = A / tileKm2;
-      PH = tiles * R * T / S_PER_H;
-    } else {
-      PH = PH_in;
-      tiles = PH * S_PER_H / (R * T);
-      A = tiles * tileKm2;
-    }
-    const seconds = tiles * R * T;
-
+    const out = tool.solve(v, mode, f);
     res.className = 'result';
-    res.innerHTML = mode === 'PH'
-      ? `<div class="big">${fmt(PH)} person-hours</div>
-         <div class="sub">to validate ${fmt(A, 0)} km² at zoom ${Z} with ${R} review${R === 1 ? '' : 's'} per tile</div>`
-      : `<div class="big">${fmt(A)} km²</div>
-         <div class="sub">coverable with ${fmt(PH)} person-hours at zoom ${Z} with ${R} review${R === 1 ? '' : 's'} per tile</div>`;
-
-    const steps = [
-      `Tile width: W = ${fmt(C, 3)} × cos(${phi}°) / 2<sup>${Z}</sup> = <b>${fmt(W)} m</b>`,
-      `Tile area: W² / 10⁶ = ${fmt(W * W, 1)} m² / 10⁶ = <b>${tileKm2.toPrecision(5)} km²</b>`,
-    ];
-    if (mode === 'PH') {
-      steps.push(
-        `Number of tiles: A / tile area = ${fmt(A, 2)} / ${tileKm2.toPrecision(5)} = <b>${int(tiles)}</b>`,
-        `Total time: tiles × R × T = ${int(tiles)} × ${R} × ${T} = <b>${int(seconds)} s</b>`,
-        `Person-hours: ${int(seconds)} / 3600 = <b>${fmt(PH)} PH</b>`
-      );
-    } else {
-      steps.push(
-        `Total time: PH × 3600 = ${fmt(PH)} × 3600 = <b>${int(seconds)} s</b>`,
-        `Number of tiles: seconds / (R × T) = ${int(seconds)} / (${R} × ${T}) = <b>${int(tiles)}</b>`,
-        `Area: tiles × tile area = ${int(tiles)} × ${tileKm2.toPrecision(5)} = <b>${fmt(A)} km²</b>`
-      );
-    }
-    $('steps').innerHTML = steps.map(s => `<li>${s}</li>`).join('');
-
-    renderVars({ phi, Z, R, T, W, A, PH });
-  }
-
-  function renderVars(v) {
-    const tag = t => `<span class="tag ${t === 'Input' ? 'in' : t === 'Output' ? 'out' : ''}">${t}</span>`;
-    const rows = [
-      ['PH', 'Total person-hours', mode === 'PH' ? 'Output' : 'Input', fmt(v.PH)],
-      ['A', 'Total mapped area', mode === 'A' ? 'Output' : 'Input', v.A !== undefined ? fmt(v.A) + ' km²' : '—'],
-      ['C', "Earth's equatorial circumference", 'Fixed', fmt(C, 3) + ' m'],
-      ['φ', 'Project latitude', 'Input', Number.isFinite(v.phi) ? v.phi + '°' : '—'],
-      ['Z', 'Zoom level', 'Input', v.Z],
-      ['W', 'Ground tile width', 'Calculated', v.W !== undefined ? fmt(v.W, 1) + ' m' : '—'],
-      ['R', 'Reviews per tile', 'Input', Number.isFinite(v.R) ? v.R : '—'],
-      ['T', 'Seconds per tile', 'Fixed', v.T],
-      ['10⁶', 'm² to km² conversion', 'Fixed', '1,000,000'],
-      ['3600', 'Seconds per hour', 'Fixed', '3,600'],
-    ];
-    $('vars').innerHTML = rows.map(([s, m, t, val]) =>
-      `<tr><td><b>${s}</b></td><td>${m}</td><td>${tag(t)}</td><td class="num">${val}</td></tr>`).join('');
+    res.innerHTML = `<div class="big">${out.headline}</div><div class="sub">${out.sub}</div>`;
+    app.querySelector('#notes').innerHTML = (out.notes || []).map(n => `<div class="note">${n}</div>`).join('');
+    app.querySelector('#steps').innerHTML = out.steps.map(s => `<li>${s}</li>`).join('');
+    app.querySelector('#vars').innerHTML = out.variables.map(([s, mean, role, val]) =>
+      `<tr><td><b>${s}</b></td><td>${mean}</td><td><span class="tag ${role}">${role}</span></td><td class="num">${val}</td></tr>`).join('');
   }
 
   function renderTex() {
-    document.querySelectorAll('[data-tex]').forEach(el => {
+    const go = () => app.querySelectorAll('[data-tex]').forEach(el => {
       if (window.katex) katex.render(el.dataset.tex, el, { displayMode: true, throwOnError: false });
       else el.textContent = el.dataset.tex;
     });
+    if (window.katex || document.readyState === 'complete') go();
+    else window.addEventListener('load', go, { once: true });
   }
 
-  window.addEventListener('DOMContentLoaded', renderTex);
-  update();
+  route();
 })();
 </script>
 </body>
