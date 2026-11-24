@@ -67,6 +67,17 @@
   .steps li { margin-bottom: 6px; }
   .steps { padding-left: 20px; margin: 0; font-variant-numeric: tabular-nums; }
   .table-wrap { overflow-x: auto; }
+  .more { padding: 12px 20px; font-size: .88rem; }
+  .more summary {
+    cursor: pointer; font-weight: 600; font-size: .92rem; color: var(--muted);
+    list-style: none; display: flex; align-items: center; gap: 8px;
+  }
+  .more summary::-webkit-details-marker { display: none; }
+  .more summary::before { content: "\25B8"; transition: transform .15s; display: inline-block; }
+  .more[open] summary::before { transform: rotate(90deg); }
+  .more[open] summary { margin-bottom: 12px; color: var(--text); }
+  .more table { font-size: .84rem; }
+  .more .eq { font-size: .85rem; }
   @media (max-width: 560px) {
     .toggle { display: flex; }
     .toggle button { flex: 1; padding: 8px 10px; }
@@ -118,29 +129,29 @@
 
   <section class="result" id="result" aria-live="polite"></section>
 
-  <section class="card">
-    <h2>Working</h2>
+  <details class="card more">
+    <summary>Working</summary>
     <ol class="steps" id="steps"></ol>
-  </section>
+  </details>
 
-  <section class="card">
-    <h2>Equations</h2>
+  <details class="card more">
+    <summary>Equations</summary>
     <div class="eq" data-tex="PH = \dfrac{\left(\dfrac{A}{W^2/10^6}\right) \times R \times T}{3600}"></div>
     <p style="margin:8px 0 0">where the ground width of one tile is</p>
     <div class="eq" data-tex="W = \dfrac{C\cos(\phi)}{2^Z}"></div>
     <p style="margin:8px 0 0">Rearranged to solve for area:</p>
     <div class="eq" data-tex="A = \dfrac{PH \times 3600}{R \times T} \times \dfrac{W^2}{10^6}"></div>
-  </section>
+  </details>
 
-  <section class="card">
-    <h2>Variables</h2>
+  <details class="card more">
+    <summary>Variables</summary>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Var</th><th>Meaning</th><th>Type</th><th style="text-align:right">Value</th></tr></thead>
         <tbody id="vars"></tbody>
       </table>
     </div>
-  </section>
+  </details>
 </main>
 
 <script>
