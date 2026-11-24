@@ -151,7 +151,8 @@
       return;
     }
     mode = tool.modes[0].id;
-    const given = new Set(tool.modes.map(m => m.given));
+    const givenOf = m => [].concat(m.given);
+    const given = new Set(tool.modes.flatMap(givenOf));
 
     app.innerHTML = `
       <div class="intro">${tool.intro}</div>
@@ -196,7 +197,8 @@
   function update() {
     const m = tool.modes.find(x => x.id === mode);
     app.querySelectorAll('.toggle button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
-    app.querySelectorAll('[data-given]').forEach(el => { el.hidden = el.dataset.field !== m.given; });
+    const mine = [].concat(m.given);
+    app.querySelectorAll('[data-given]').forEach(el => { el.hidden = !mine.includes(el.dataset.field); });
 
     const v = {};
     tool.inputs.forEach(i => { v[i.id] = parseFloat(app.querySelector('#in-' + i.id).value); });

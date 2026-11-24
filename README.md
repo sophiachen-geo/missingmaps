@@ -37,7 +37,7 @@ Each file in `calculators/` registers one tab with `window.Calculators.register(
 | Field | What it does |
 |---|---|
 | `intro` | Short paragraph shown above the inputs |
-| `modes` | The things you can solve for. Each has a `label` and the input it replaces (`given`) |
+| `modes` | The things you can solve for. Each has a `label` and the list of inputs shown in that mode (`given`). Inputs not named in any mode are always shown |
 | `inputs` | Each field with `id`, `symbol`, `label`, `unit`, `default`, `min`/`max`, `hint`. Use `type: 'select'` with `options` for dropdowns and `fixed: true` for read only constants |
 | `equations` | A list of `{ tex }` items (rendered with KaTeX) and `{ text }` captions |
 | `validate(values, mode)` | Returns a list of error messages, or an empty list |
